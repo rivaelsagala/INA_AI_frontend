@@ -1,36 +1,172 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# INA AI — Medical AI Frontend
 
-## Getting Started
+Antarmuka web untuk asisten kesehatan berbasis AI yang terhubung dengan backend RAG (Retrieval-Augmented Generation) untuk menjawab pertanyaan medis berdasarkan dataset penyakit umum di Indonesia.
 
-First, run the development server:
+## Fitur Utama
+
+| #   | Fitur                                             | Status |
+| --- | ------------------------------------------------- | ------ |
+| 1   | Chat Interface (real-time conversation)           | ✅     |
+| 2   | Multi-model Selection (GPT-4o-mini, Gemini, dll.) | ✅     |
+| 3   | Session Management (create, select, delete)       | ✅     |
+| 4   | Chat History per Session                          | ✅     |
+| 5   | Inline Source Citations Display                   | ✅     |
+| 6   | Confidence Disclaimer Display                     | ✅     |
+| 7   | Responsive Design (mobile & desktop)              | ✅     |
+| 8   | Dark Mode UI                                      | ✅     |
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS 4 + custom CSS variables
+- **UI Components**: shadcn/ui + Base UI React
+- **Icons**: Lucide React
+- **Font**: Geist Sans & Geist Mono
+- **Analytics**: Vercel Analytics (production only)
+
+## Arsitektur Komponen
+
+```
+app/
+├── layout.tsx          # Root layout (metadata, fonts, analytics)
+├── page.tsx            # Halaman utama — state management & API calls
+└── globals.css         # Design system (CSS variables, tema, animasi)
+
+components/
+├── Header.tsx          # Navbar — model selector dropdown + user avatar
+├── Sidebar.tsx         # Sidebar — riwayat percakapan + navigasi sesi
+├── ChatArea.tsx        # Area chat — daftar pesan + typing indicator
+├── InputArea.tsx       # Input area — textarea + tombol kirim/hapus
+└── ui/
+    └── button.tsx      # Reusable button component (shadcn)
+
+lib/
+└── utils.ts            # Utility functions (cn helper)
+```
+
+## Alur Kerja Aplikasi
+
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
+│   Sidebar   │────▶│   page.tsx   │────▶│  Backend API    │
+│  (sessions) │     │  (state mgr) │     │  /api/chat      │
+└─────────────┘     └──────┬───────┘     │  /api/sessions  │
+                           │             └─────────────────┘
+              ┌────────────┼────────────┐
+              ▼            ▼            ▼
+        ┌──────────┐ ┌──────────┐ ┌──────────┐
+        │  Header  │ │ ChatArea │ │InputArea │
+        │ (model)  │ │ (pesan)  │ │ (input)  │
+        └──────────┘ └──────────┘ └──────────┘
+```
+
+## Setup & Instalasi
+
+### 1. Clone & Install
+
+```bash
+git clone https://github.com/rivaelsagala/INA_AI_frontend.git
+cd fe
+npm install
+```
+
+### 2. Environment Variables
+
+Buat file `.env` di root:
+
+```env
+# URL Backend Flask API
+NEXT_PUBLIC_BACKEND_URL=http://localhost:5000
+
+# NextAuth (untuk autentikasi, jika diaktifkan)
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=<random-secret-key>
+NEXTAUTH_TRUST_HOST=true
+
+# Environment
+NODE_ENV=development
+```
+
+### 3. Jalankan Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Aplikasi berjalan di `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 4. Build untuk Production
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+## Integrasi Backend API
 
-To learn more about Next.js, take a look at the following resources:
+Frontend berkomunikasi dengan backend Flask melalui REST API berikut:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Method   | Endpoint                          | Fungsi di Frontend                          |
+| -------- | --------------------------------- | ------------------------------------------- |
+| `GET`    | `/api/chat-sessions?user_id=1`    | `fetchSessions()` — load semua sesi         |
+| `POST`   | `/api/chat-sessions`              | `handleNewChat()` — buat sesi baru          |
+| `GET`    | `/api/chat-history/<session_id>`  | `handleSelectConversation()` — load riwayat |
+| `POST`   | `/api/chat`                       | `handleSendMessage()` — kirim pesan         |
+| `DELETE` | `/api/chat-sessions/<session_id>` | `handleClearChat()` — hapus sesi            |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Model Mapping
 
-## Deploy on Vercel
+Frontend mengirim `model_id` (integer) ke backend berdasarkan pilihan user:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Model (Frontend) | model_id (Backend) |
+| ---------------- | ------------------ |
+| GPT-4o-mini      | 4                  |
+| Gemini           | 4                  |
+| Claude           | —                  |
+| Llama            | 1                  |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Struktur Response yang Ditampilkan
+
+Frontend mem-parsing response dari `/api/chat` dan menampilkan:
+
+1. **Jawaban utama** (`data.answer`) — teks jawaban AI
+2. **Sumber referensi** (`data.citations`) — daftar sumber dengan `[1]`, `[2]`, dst.
+3. **Confidence disclaimer** (`data.confidence_disclaimer`) — peringatan jika confidence rendah
+
+## Scripts
+
+| Script      | Perintah        | Deskripsi                        |
+| ----------- | --------------- | -------------------------------- |
+| Development | `npm run dev`   | Jalankan dev server (hot reload) |
+| Build       | `npm run build` | Build production bundle          |
+| Start       | `npm start`     | Jalankan production server       |
+| Lint        | `npm run lint`  | Jalankan ESLint                  |
+
+## Dependencies
+
+### Production
+
+| Package                    | Versi   | Fungsi                          |
+| -------------------------- | ------- | ------------------------------- |
+| `next`                     | 16.2.9  | Framework React (App Router)    |
+| `react`                    | 19.2.4  | UI library                      |
+| `react-dom`                | 19.2.4  | React DOM renderer              |
+| `lucide-react`             | ^1.16.0 | Icon library                    |
+| `shadcn`                   | ^4.8.0  | UI component system             |
+| `@base-ui/react`           | ^1.5.0  | Headless UI primitives          |
+| `class-variance-authority` | ^0.7.1  | Variant-based styling           |
+| `clsx`                     | ^2.1.1  | Conditional classnames          |
+| `tailwind-merge`           | ^3.3.1  | Merge Tailwind classes          |
+| `tw-animate-css`           | ^1.4.0  | Tailwind animation utilities    |
+| `@vercel/analytics`        | 1.6.1   | Web analytics (production only) |
+
+### Dev Dependencies
+
+| Package                | Versi  | Fungsi                        |
+| ---------------------- | ------ | ----------------------------- |
+| `tailwindcss`          | ^4     | CSS framework                 |
+| `@tailwindcss/postcss` | ^4     | PostCSS plugin untuk Tailwind |
+| `typescript`           | ^5     | Type checking                 |
+| `eslint`               | ^9     | Code linting                  |
+| `eslint-config-next`   | 16.2.9 | ESLint rules untuk Next.js    |
