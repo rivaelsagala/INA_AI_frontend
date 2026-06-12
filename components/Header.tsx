@@ -8,7 +8,7 @@ interface HeaderProps {
   onModelChange: (model: string) => void
 }
 
-const models = ['gpt-4', 'gemini', 'claude', 'llama']
+const models = ['gpt-4o-mini', 'gemini', 'claude', 'llama']
 
 export default function Header({ selectedModel, onModelChange }: HeaderProps) {
   const [isOpen, setIsOpen] = useState(false)
